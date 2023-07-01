@@ -11,15 +11,18 @@ import androidx.annotation.NonNull;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
-    private static final String CHANNEL = "com.practice.platformChannel";
+    private static final String METHOD_CHANNEL = "com.practice.platformChannel/methodChannel";
+    private static final String EVENT_CHANNEL = "com.practice.platformChannel/eventChannel";
+    private final BarometerReading barometerReading = new BarometerReading();
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine){
         super.configureFlutterEngine(flutterEngine);
-        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), METHOD_CHANNEL)
                 .setMethodCallHandler(
                         (call, result) -> {
                             if(call.method.equals("getBatteryLevel")){
@@ -29,11 +32,17 @@ public class MainActivity extends FlutterActivity {
                                 } else{
                                     result.error("UNAVAILABLE", "Battery Level not Available", null);
                                 }
+                            } else if(call.method.equals("initializeBarometer")) {
+                                barometerReading.init(this.getContext());
+                                    result.success(true);
                             } else{
                                 result.notImplemented();
                             }
                         }
                 );
+
+        new EventChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), EVENT_CHANNEL)
+                .setStreamHandler(barometerReading);
 
     }
 

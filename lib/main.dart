@@ -13,16 +13,37 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  int batteryLevel = 0;
+  int _batteryLevel = 0;
+  Stream<double> _barometerStream = const Stream.empty();
 
-  final MethodChannel _methodChannel = const MethodChannel("com.practice.platformChannel");
+  final MethodChannel _methodChannel = const MethodChannel("com.practice.platformChannel/methodChannel");
+  final EventChannel _eventChannel = const EventChannel("com.practice.platformChannel/eventChannel");
 
   Future<void>getBatteryLevel() async{
-    int _batteryLevel = await _methodChannel.invokeMethod("getBatteryLevel");
+    int batteryLevel = await _methodChannel.invokeMethod("getBatteryLevel");
     setState(() {
-      batteryLevel = _batteryLevel;
+      _batteryLevel = batteryLevel;
     });
   }
+
+  Future<bool> initializeBarometer()async {
+    return await _methodChannel.invokeMethod("initializeBarometer");
+  }
+
+ Stream<double> pressureStream(){
+    _barometerStream = _eventChannel.receiveBroadcastStream()
+        .map<double>((value) => value);
+
+    return _barometerStream;
+ }
+
+ @override
+  void initState() {
+    super.initState();
+    initializeBarometer();
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +55,21 @@ class _MainAppState extends State<MainApp> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Battery Level: ${batteryLevel.toString()}%'),
+                Text('Battery Level: ${_batteryLevel.toString()}%'),
                 const SizedBox(height: 12.0),
                 ElevatedButton(
                   onPressed: getBatteryLevel,
                   child: const Text("Get Battery Level"),
                 ),
+                const SizedBox(height: 12.0),
+                StreamBuilder(
+                  stream: pressureStream(),
+                    builder: (BuildContext context, AsyncSnapshot<double> snapshot){
+                        if(snapshot.hasData){
+                          return Text('Pressure Level: ${snapshot.data}');
+                        }
+                        return const Text("No Pressure detected!");
+                    }),
               ],
             ),
           ),
